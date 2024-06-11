@@ -8,14 +8,14 @@ function App() {
 	const [filteredData, setFilteredData] = createSignal<object[]>([]);
 	const [filter, setFilter] = createSignal<string>("");
 
-	const [keyToCopy, setKeyToCopy] = createSignal<string | undefined>(undefined);
-
 	let inputRef: HTMLInputElement;
 	let selectRef: HTMLSelectElement;
 	let selectCopyRef: HTMLSelectElement;
 
 	const readFile = (e: ProgressEvent<FileReader>) => {
+		if (!e.target) return;
 		const file = e.target.result;
+		if (typeof file !== "string") return;
 		const lines = file.trim().split("\n");
 
 		const keys = lines[0].split(",");
@@ -23,9 +23,9 @@ function App() {
 		// map all the lines to objects
 		const data = lines.slice(1).map((line) => {
 			const values = line.split(",");
-			const obj: any = {};
+			const obj = {};
 			keys.forEach((key, i) => {
-				obj[key] = values[i];
+				Object.assign(obj, { [key]: values[i] });
 			});
 			return obj;
 		});
@@ -46,7 +46,9 @@ function App() {
 	const handleInputChange = (input: string) => {
 		// filter key using (value signal) and value using input
 		const filtered = data().filter((row) => {
-			const value = row[filter()];
+			const key = filter();
+			// @ts-ignore
+			const value = row[key];
 			if (value) {
 				return value.toLowerCase().includes(input.toLowerCase());
 			}
@@ -65,6 +67,7 @@ function App() {
 				<div class="flex w-2/3 gap-2">
 					<select
 						name="Selecione o filtro..."
+						// @ts-ignore
 						ref={selectRef}
 						onChange={(e) => {
 							const value = e.target.value;
@@ -85,20 +88,15 @@ function App() {
 						class="input"
 						placeholder="Digite o filtro..."
 						onChange={(e) => handleInputChange(e.target.value)}
+						// @ts-ignore
 						ref={inputRef}
 					/>
 				</div>
 			</div>
 			<Show when={data().length >= 1}>
 				<div class="my-6 flex gap-2">
-					<select
-						ref={selectCopyRef}
-						onChange={(e) => {
-							if (e.target.value.includes("all")) {
-								setKeysToCopy(Object.keys(data()[0]));
-							}
-						}}
-					>
+					{/* @ts-ignore */}
+					<select ref={selectCopyRef}>
 						<Show when={data().length >= 1}>
 							<For each={Object.keys(data()[0])}>
 								{(key) => (
@@ -114,6 +112,7 @@ function App() {
 						onClick={() => {
 							// copy to clipboard all the values of the selected key
 							const key = selectCopyRef.value;
+							// @ts-ignore
 							const values = filteredData().map((row) => row[key]);
 							navigator.clipboard.writeText(values.join("\n"));
 						}}
